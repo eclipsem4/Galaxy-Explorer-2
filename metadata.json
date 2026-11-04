@@ -1,0 +1,6 @@
+{
+  "name": "Galactic Explorer",
+  "description": "An interactive, ultra-premium space dashboard presenting comprehensive characteristics, live space weather with simulated solar flare alerts, high-resolution visual animations, size comparisons, orbit simulations, and custom synthesized atmospheric ambient sounds for all the planets in our solar system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
