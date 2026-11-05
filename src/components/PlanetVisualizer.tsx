@@ -839,7 +839,7 @@ export const PlanetVisualizer: React.FC<PlanetVisualizerProps> = ({
 
       {/* Floating coordinates or active radar sweep stats overlay top right */}
       {showTopoMap && (
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 font-mono text-[7px] text-slate-400 opacity-80 pointer-events-none z-20">
+        <div className="absolute top-2 right-2 hidden xs:flex flex-col items-end gap-1 font-mono text-[7px] text-slate-400 opacity-80 pointer-events-none z-20">
           <div className="flex items-center gap-1.5">
             <Radio className={`w-3 h-3 ${topoStyles.hudText} animate-pulse`} />
             <span className="uppercase tracking-widest text-[7.5px]">LIDAR-II COHERENT</span>
@@ -852,7 +852,7 @@ export const PlanetVisualizer: React.FC<PlanetVisualizerProps> = ({
 
       {/* Floating astronomical orbital parameters stats overlay top right in Orbit Mode */}
       {showOrbitPath && (
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1 font-mono text-[7.5px] text-slate-400 opacity-85 pointer-events-none z-20 bg-slate-950/80 px-2 py-1.5 rounded border border-white/5 shadow-md">
+        <div className="absolute top-2 right-2 hidden xs:flex flex-col items-end gap-1 font-mono text-[7.5px] text-slate-400 opacity-85 pointer-events-none z-20 bg-slate-950/80 px-2 py-1.5 rounded border border-white/5 shadow-md">
           <div className="flex items-center gap-1.5 mb-0.5">
             <Activity className={`w-3 h-3 ${topoStyles.hudText} animate-pulse`} />
             <span className={`uppercase tracking-widest text-[8px] font-bold ${topoStyles.hudText}`}>HELIOCENTRIC TRACKER</span>

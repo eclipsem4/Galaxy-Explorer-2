@@ -233,16 +233,17 @@ export const AtmosphereChart: React.FC<AtmosphereChartProps> = ({ planetId, plan
   return (
     <div 
       ref={containerRef}
-      className={`flex flex-col sm:flex-row items-center justify-between gap-6 p-4 rounded-xl border ${themeStyles.border} ${themePreset === 'glass' ? 'ios-glass-card' : 'bg-[#03050a]/60 backdrop-blur-md'} relative`}
+      className={`flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6 p-3 sm:p-4 rounded-xl border ${themeStyles.border} ${themePreset === 'glass' ? 'ios-glass-card' : 'bg-[#03050a]/60 backdrop-blur-md'} relative max-w-full overflow-hidden`}
       id={`atmosphere-d3-block-${planetId}`}
     >
-      <div className="relative flex items-center justify-center w-[240px] h-[240px]">
+      <div className="relative flex items-center justify-center w-[220px] h-[220px] sm:w-[240px] sm:h-[240px] shrink-0">
         {/* Core SVG */}
         <svg 
           ref={svgRef} 
           width="240" 
           height="240" 
-          className="relative z-10"
+          className="relative z-10 w-full h-full max-w-[240px] max-h-[240px]"
+          viewBox="0 0 240 240"
         />
 
         {/* Center UI Telemetry Overlay readout */}
@@ -261,31 +262,33 @@ export const AtmosphereChart: React.FC<AtmosphereChartProps> = ({ planetId, plan
       </div>
 
       {/* Numerical list representation with responsive progress lines */}
-      <div className="flex-1 w-full space-y-3 font-mono text-[11px]">
+      <div className="flex-1 w-full min-w-0 space-y-3 font-mono text-[11px]">
         <div className="flex items-center gap-2 border-b border-white/5 pb-2">
-          <div className={`w-1.5 h-1.5 rounded-full ${themeStyles.dotBg}`} />
-          <span className={`text-xs font-semibold uppercase ${themeStyles.accentText} tracking-wider`}>SPECTRUM READOUTS</span>
+          <div className={`w-1.5 h-1.5 rounded-full ${themeStyles.dotBg} shrink-0`} />
+          <span className={`text-xs font-semibold uppercase ${themeStyles.accentText} tracking-wider truncate`}>SPECTRUM READOUTS</span>
         </div>
 
-        <div className="space-y-3.5">
+        <div className="space-y-3">
           {dataset.map((item, index) => {
             const isHovered = hoveredGas && hoveredGas.gas === item.gas;
             return (
               <div 
                 key={index}
-                className={`space-y-1 py-1 px-1.5 rounded transition-all ${isHovered ? 'bg-white/5 border border-white/10' : 'border border-transparent'}`}
+                className={`space-y-1.5 py-1 px-1.5 rounded transition-all ${isHovered ? 'bg-white/5 border border-white/10' : 'border border-transparent'}`}
                 onMouseEnter={() => setHoveredGas(item)}
                 onMouseLeave={() => setHoveredGas(null)}
               >
-                <div className="flex justify-between items-center text-slate-300">
-                  <div className="flex items-center gap-2">
+                <div className="flex justify-between items-center gap-2 sm:gap-3 text-slate-300 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     <span 
-                      className="w-2.5 h-2.5 rounded-sm inline-block shadow-inner" 
+                      className="w-2.5 h-2.5 rounded-sm inline-block shadow-inner shrink-0" 
                       style={{ backgroundColor: item.color }} 
                     />
-                    <span className="text-slate-100 font-medium">{item.gas}</span>
+                    <span className="text-slate-100 font-medium truncate text-xs" title={item.gas}>{item.gas}</span>
                   </div>
-                  <span className={`${themeStyles.percentText} font-bold`}>{item.percentage}%</span>
+                  <span className={`${themeStyles.percentText} font-bold shrink-0 font-mono tabular-nums text-xs ml-2`}>
+                    {item.percentage}%
+                  </span>
                 </div>
                 
                 {/* Dynamic customized bar indicator */}
@@ -305,9 +308,9 @@ export const AtmosphereChart: React.FC<AtmosphereChartProps> = ({ planetId, plan
         </div>
 
         {/* Diagnostic alert message */}
-        <div className={`pt-2 border-t border-dashed ${themeStyles.border} text-[9px] ${themeStyles.accentText} flex items-center justify-between`}>
+        <div className={`pt-2 border-t border-dashed ${themeStyles.border} text-[9px] ${themeStyles.accentText} flex items-center justify-between gap-2 flex-wrap`}>
           <span>GAS CHROMATOGRAPHY: CALIBRATED</span>
-          <span>DEV_ACCURACY_99.8</span>
+          <span className="tabular-nums">DEV_ACCURACY_99.8</span>
         </div>
       </div>
     </div>

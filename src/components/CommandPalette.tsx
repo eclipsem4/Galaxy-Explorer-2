@@ -27,7 +27,7 @@ export interface CommandPaletteProps {
   onSelectPlanet: (id: string) => void;
   activePlanetId: string;
   themePreset?: ThemePreset;
-  onSwitchTab?: (tab: 'observatory' | 'system' | 'lab') => void;
+  onSwitchTab?: (tab: 'observatory' | 'system' | 'lab' | 'journey') => void;
   onSelectTool?: (toolId: string) => void;
 }
 
@@ -42,7 +42,7 @@ export interface PaletteItem {
   keywords: string[];
   planetId?: string;
   toolId?: string;
-  tabTarget?: 'observatory' | 'system' | 'lab';
+  tabTarget?: 'observatory' | 'system' | 'lab' | 'journey';
   iconType: 'planet' | 'scale' | 'orbit' | 'compass' | 'eye' | 'flame';
   planetColor?: { primary: string; secondary: string; glow: string };
 }
@@ -173,6 +173,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         toolId: 'space-weather',
         tabTarget: 'observatory',
         iconType: 'flame',
+      },
+      {
+        id: 'tool-universe-journey',
+        type: 'tool',
+        title: 'Universe Journey (Sol to Neptune & Beyond)',
+        subtitle: 'Smooth vertical scroll expedition from the Sun past all 9 celestial worlds',
+        category: 'Navigation Module',
+        keywords: ['journey', 'expedition', 'sun', 'sol', 'scroll', 'tour', 'travel', 'universe', 'walkthrough', 'neptune'],
+        toolId: 'journey',
+        tabTarget: 'journey',
+        iconType: 'orbit',
       },
     ];
 
@@ -591,6 +602,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 >
                   <Compass className="w-3 h-3 text-cyan-400" />
                   Dynamics Lab
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSwitchTab('journey');
+                    onClose();
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md text-[9.5px] font-mono text-slate-400 hover:text-amber-300 hover:bg-white/5 transition-colors shrink-0"
+                >
+                  <Orbit className="w-3 h-3 text-amber-400" />
+                  Journey
                 </button>
               </div>
             )}

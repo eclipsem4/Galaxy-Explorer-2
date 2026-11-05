@@ -626,29 +626,29 @@ export const MissionLog: React.FC<MissionLogProps> = ({
 
   return (
     <div 
-      className={`${themeStyles.containerBg} border ${themeStyles.border} ${themeStyles.glow} rounded-2xl p-6 font-mono max-w-xl w-full text-left space-y-4 relative overflow-hidden`} 
+      className={`${themeStyles.containerBg} border ${themeStyles.border} ${themeStyles.glow} rounded-2xl p-4 sm:p-6 font-mono max-w-xl w-full text-left space-y-4 relative overflow-hidden`} 
       id="planet-mission-log"
     >
       {/* Matrix line scanning grid overlay */}
       <div className={`absolute inset-0 ${themeStyles.scanlines} pointer-events-none`} />
 
       {/* Primary Terminal Header */}
-      <div className={`flex items-center justify-between border-b ${themeStyles.divider} pb-3 z-10 relative`}>
-        <div className="flex items-center gap-2">
-          <Terminal className={`w-4 h-4 ${themeStyles.text}`} />
-          <span className={`text-xs uppercase tracking-widest ${themeStyles.terminalHeader} font-semibold`}>
+      <div className={`flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 border-b ${themeStyles.divider} pb-3 z-10 relative`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <Terminal className={`w-4 h-4 ${themeStyles.text} shrink-0`} />
+          <span className={`text-[11px] sm:text-xs uppercase tracking-widest ${themeStyles.terminalHeader} font-semibold truncate`}>
             COSMIC TELEMETRY TERMINAL
           </span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Export JSON Telemetry Button */}
           <button
             onClick={() => triggerTelemetryDownload(false)}
-            className={`flex items-center gap-1.5 text-[9px] ${themeStyles.accentBorder} ${themeStyles.buttonBg} px-2 py-1 rounded border font-mono font-semibold transition-all ${themeStyles.accentBorderHover} cursor-pointer`}
+            className={`flex items-center gap-1.5 text-[9px] ${themeStyles.accentBorder} ${themeStyles.buttonBg} px-2 py-1 rounded border font-mono font-semibold transition-all ${themeStyles.accentBorderHover} cursor-pointer min-h-[28px]`}
             title="Download formatted JSON telemetry summary as file"
             id="download-telemetry-json-btn"
           >
-            <FileJson className={`w-3 h-3 ${themeStyles.text}`} />
+            <FileJson className={`w-3 h-3 ${themeStyles.text} shrink-0`} />
             <span className="hidden sm:inline">[JSON EXPORT]</span>
             <span className="sm:hidden">JSON</span>
           </button>
@@ -659,59 +659,59 @@ export const MissionLog: React.FC<MissionLogProps> = ({
               setIsPrintOpen(true);
               setConsoleHistory(p => [...p, '$ print', '[SYSTEM] Opening physical telemetry dossier window.']);
             }}
-            className={`flex items-center gap-1.5 text-[9px] ${themeStyles.accentBorder} ${themeStyles.buttonBg} px-2 py-1 rounded border font-mono font-semibold transition-all ${themeStyles.accentBorderHover} cursor-pointer`}
+            className={`flex items-center gap-1.5 text-[9px] ${themeStyles.accentBorder} ${themeStyles.buttonBg} px-2 py-1 rounded border font-mono font-semibold transition-all ${themeStyles.accentBorderHover} cursor-pointer min-h-[28px]`}
             title="Launch print-ready preview dossier"
             id="print-telemetry-dossier-btn"
           >
-            <Printer className={`w-3 h-3 ${themeStyles.text}`} />
+            <Printer className={`w-3 h-3 ${themeStyles.text} shrink-0`} />
             <span className="hidden sm:inline">[PRINT RECORD]</span>
             <span className="sm:hidden">PRINT</span>
           </button>
           
-          <div className={`flex items-center gap-1.5 text-[9px] ${themeStyles.accentBorder} ${themeStyles.accentBg} px-2 py-1 rounded border`}>
+          <div className={`flex items-center gap-1.5 text-[9px] ${themeStyles.accentBorder} ${themeStyles.accentBg} px-2 py-1 rounded border shrink-0 min-h-[28px]`}>
             <span className={`w-1.5 h-1.5 rounded-full ${themeStyles.dotBg} animate-pulse`} />
-            <span className="font-mono">ONLINE</span>
+            <span className="font-mono text-[9px]">ONLINE</span>
           </div>
         </div>
       </div>
 
-      {/* Technical Inner Selectors Sub-bar: 3 Modes */}
-      <div className="grid grid-cols-3 gap-1.5 bg-[#03050a]/90 p-1 rounded-lg border border-white/5 relative z-10 w-full text-center">
+      {/* Technical Inner Selectors Sub-bar: Horizontal Scrollable Compact Chip Tabs */}
+      <div className="flex items-center gap-1.5 bg-[#03050a]/90 p-1 rounded-lg border border-white/5 relative z-10 w-full overflow-x-auto scrollbar-none">
         <button
           onClick={() => handleLogModeChange('terminal')}
-          className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded text-[9.5px] sm:text-[10px] uppercase font-mono tracking-wider transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-[10px] sm:text-[11px] uppercase font-mono tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 min-h-[32px] ${
             logMode === 'terminal'
               ? themeStyles.tabActive
               : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
           }`}
           id="terminal-mode-cli-tab"
         >
-          <Terminal className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="truncate">[01 // CLI Terminal]</span>
+          <Terminal className="w-3.5 h-3.5 shrink-0" />
+          <span>[01 // CLI Terminal]</span>
         </button>
         <button
           onClick={() => handleLogModeChange('spectra')}
-          className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded text-[9.5px] sm:text-[10px] uppercase font-mono tracking-wider transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-[10px] sm:text-[11px] uppercase font-mono tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 min-h-[32px] ${
             logMode === 'spectra'
               ? themeStyles.tabActive
               : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
           }`}
           id="terminal-mode-spectra-tab"
         >
-          <BarChart3 className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="truncate">[02 // Spectra]</span>
+          <BarChart3 className="w-3.5 h-3.5 shrink-0" />
+          <span>[02 // Spectra]</span>
         </button>
         <button
           onClick={() => handleLogModeChange('timeline')}
-          className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded text-[9.5px] sm:text-[10px] uppercase font-mono tracking-wider transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-md text-[10px] sm:text-[11px] uppercase font-mono tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 min-h-[32px] ${
             logMode === 'timeline'
               ? themeStyles.tabActive
               : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
           }`}
           id="terminal-mode-voyage-tab"
         >
-          <Milestone className="w-3.5 h-3.5 flex-shrink-0" />
-          <span className="truncate">[03 // Archive]</span>
+          <Milestone className="w-3.5 h-3.5 shrink-0" />
+          <span>[03 // Archive]</span>
         </button>
       </div>
 

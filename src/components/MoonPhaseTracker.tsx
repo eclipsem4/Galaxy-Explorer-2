@@ -526,7 +526,7 @@ export const MoonPhaseTracker: React.FC<MoonPhaseTrackerProps> = ({ planet, them
   return (
     <div 
       ref={containerRef}
-      className={`rounded-2xl border ${themeStyles.border} ${themeStyles.cardBg} backdrop-blur-xl p-6 relative flex flex-col gap-6`}
+      className={`rounded-2xl border ${themeStyles.border} ${themeStyles.cardBg} backdrop-blur-xl p-4 sm:p-6 relative flex flex-col gap-6`}
       id="moon-illumination-phase-tracker"
     >
       {/* Small tech aesthetic indicators */}

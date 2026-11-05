@@ -18,6 +18,7 @@ import { SpaceAudio } from './utils/audio';
 import { SpaceCursor } from './components/SpaceCursor';
 import { StarMapper } from './components/StarMapper';
 import { LiveSpaceWeather } from './components/LiveSpaceWeather';
+import { UniverseJourney } from './components/UniverseJourney';
 
 // Icons from lucide-react
 import { 
@@ -46,15 +47,17 @@ import {
   Layers,
   Check,
   Terminal,
-  Radio
+  Radio,
+  Rocket
 } from 'lucide-react';
 
-export type NavTab = 'observatory' | 'system' | 'lab';
+export type NavTab = 'observatory' | 'system' | 'lab' | 'journey';
 
 const TAB_ORDER: Record<NavTab, number> = {
   observatory: 0,
   system: 1,
   lab: 2,
+  journey: 3,
 };
 
 interface NavTabConfig {
@@ -90,6 +93,14 @@ const NAV_TABS: NavTabConfig[] = [
     subsystemTitle: 'CH-03 // DYNAMICS LAB & ASTROPHYSICS SUITE',
     subsystemSummary: 'ESCAPE VELOCITIES • N-BODY ORBITAL ENGINE • IMPACT ANALYSIS',
     icon: Compass,
+  },
+  {
+    id: 'journey',
+    code: '04',
+    label: 'Journey',
+    subsystemTitle: 'CH-04 // SOLAR EXPEDITION & ORBITAL TRAJECTORY',
+    subsystemSummary: 'DESCENT FROM SOL (0 AU) TO KUIPER FRONTIER (40 AU) • VERTICAL EXPEDITION',
+    icon: Rocket,
   },
 ];
 
@@ -472,15 +483,37 @@ export default function App() {
       {/* Decorative tiny starry background layer */}
       <div className="absolute inset-0 opacity-15 bg-[radial-gradient(rgba(255,255,255,0.15)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
-      {/* Global Space Ambient Control Floating bar */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-slate-950/95 hover:bg-slate-900 border border-white/10 shadow-3xl rounded-full px-3.5 py-2 backdrop-blur-md transition-all">
-        <span className="text-[10px] font-mono tracking-widest text-slate-400 uppercase hidden sm:inline">Cosmic Audio Feed</span>
+      {/* Docked Non-Intrusive Bottom Glass Action Pill */}
+      <div 
+        className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 sm:gap-3 bg-slate-950/85 hover:bg-slate-900/95 border border-white/15 shadow-2xl rounded-full px-3.5 sm:px-4 py-1.5 backdrop-blur-xl transition-all duration-300"
+        id="docked-ambient-audio-pill"
+      >
         <button 
           onClick={handleCosmicVolumeToggle}
-          className="p-2 rounded-full bg-slate-950 hover:bg-slate-800 border border-white/10 text-cyan-400 transition"
+          className="flex items-center gap-2 py-1 px-2 rounded-full hover:bg-white/10 text-cyan-300 transition-colors cursor-pointer min-h-[36px]"
           title={isCosmicMuted ? "Unmute Ambient Resonance" : "Mute Space Resonance"}
         >
-          {isCosmicMuted ? <VolumeX className="w-4 h-4 text-slate-500" /> : <Volume2 className="w-4 h-4 text-cyan-400 animate-pulse" />}
+          {isCosmicMuted ? (
+            <VolumeX className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          ) : (
+            <Volume2 className="w-3.5 h-3.5 text-cyan-400 animate-pulse shrink-0" />
+          )}
+          <span className="text-[10px] font-mono tracking-wider uppercase">
+            {isCosmicMuted ? 'AUDIO: MUTED' : 'AUDIO: LIVE'}
+          </span>
+        </button>
+
+        <span className="w-px h-3.5 bg-white/20" />
+
+        <button
+          onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            SpaceAudio.playInterfaceChirp(1300, 0.03);
+          }}
+          className="text-[9.5px] font-mono text-slate-400 hover:text-white px-2 py-1 rounded-full hover:bg-white/5 transition-colors cursor-pointer"
+          title="Scroll to top of view"
+        >
+          TOP ▲
         </button>
       </div>
 
@@ -700,7 +733,7 @@ export default function App() {
 
           {/* Mobile Dedicated Segmented Tab Bar (Visible on mobile/tablet screens < md) */}
           <div className="md:hidden pb-2.5 pt-0.5 w-full">
-            <nav aria-label="Mobile Navigation" className="grid grid-cols-3 gap-1 p-1 bg-slate-950/95 border border-white/10 rounded-xl shadow-2xl w-full relative">
+            <nav aria-label="Mobile Navigation" className="grid grid-cols-4 gap-1 p-1 bg-slate-950/95 border border-white/10 rounded-xl shadow-2xl w-full relative">
               {NAV_TABS.map((tab) => {
                 const isActive = activeTab === tab.id;
                 const Icon = tab.icon;
@@ -710,7 +743,7 @@ export default function App() {
                     id={`mobile-nav-tab-${tab.id}`}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`relative min-h-[44px] flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg text-[10.5px] font-mono uppercase tracking-wider transition-colors touch-manipulation cursor-pointer select-none active:scale-[0.98] z-10 ${
+                    className={`relative min-h-[44px] flex flex-col xs:flex-row items-center justify-center gap-1 px-1 sm:px-2 py-1.5 rounded-lg text-[9px] xs:text-[10px] font-mono uppercase tracking-wider transition-colors touch-manipulation cursor-pointer select-none active:scale-[0.98] z-10 ${
                       isActive
                         ? 'text-cyan-200 font-bold'
                         : 'text-slate-400 active:bg-white/5'
@@ -784,7 +817,7 @@ export default function App() {
                   <h2 className="text-2xl font-light tracking-wider text-white">INTERACTIVE OBSERVATORY</h2>
                 </div>
 
-                <div className="flex items-center gap-1.5 bg-slate-950/80 border border-white/10 rounded-2xl p-1 shadow-2xl">
+                <div className="flex flex-wrap items-center gap-1.5 bg-slate-950/80 border border-white/10 rounded-2xl p-1 shadow-2xl">
                   <button
                     onClick={() => setObservatorySubView('overview')}
                     className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-mono uppercase tracking-wider transition-all ${
@@ -810,6 +843,15 @@ export default function App() {
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                       LIVE GROUNDING
                     </span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('journey')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono uppercase tracking-wider text-amber-300 hover:text-amber-100 hover:bg-amber-500/15 border border-amber-500/30 transition-all cursor-pointer"
+                    title="Launch vertical universe scroll journey (Sol → Neptune)"
+                  >
+                    <Rocket className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="hidden sm:inline">Universe Journey</span>
+                    <span className="sm:hidden">Journey</span>
                   </button>
                 </div>
               </div>
@@ -1306,6 +1348,45 @@ export default function App() {
               themePreset={themePreset}
             />
           </motion.div>
+        ) : activeTab === 'journey' ? (
+          /* Smooth Vertical Universe Scroll Journey (Sol to Neptune & Beyond) */
+          <motion.div
+            key="universe-journey-tab"
+            custom={direction}
+            variants={tabTransitionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="space-y-6"
+            id="universe-journey-container"
+          >
+            {/* Interface Boot Sequence Telemetry Header */}
+            <div className="flex items-center justify-between gap-3 px-3.5 py-1.5 rounded-xl bg-slate-950/60 border border-white/5 text-[10px] font-mono text-slate-400 backdrop-blur-md">
+              <div className="flex items-center gap-2.5">
+                <span className="flex items-center gap-1.5 text-amber-400 font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                  SYS_EXPEDITION
+                </span>
+                <span className="text-white/20">|</span>
+                <span className="text-slate-300 uppercase tracking-wider">{NAV_TABS[3].subsystemTitle}</span>
+              </div>
+              <div className="hidden sm:flex items-center gap-3 text-[9px] text-slate-500">
+                <span>{NAV_TABS[3].subsystemSummary}</span>
+                <span className="text-emerald-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  ONLINE
+                </span>
+              </div>
+            </div>
+
+            <UniverseJourney
+              themePreset={themePreset}
+              onInspectPlanet={(planetId) => {
+                setActivePlanetId(planetId);
+                setActiveTab('observatory');
+              }}
+            />
+          </motion.div>
         ) : (
           /* Dynamics Laboratory tools (Simulators and Comparisons) */
           <motion.div
@@ -1402,6 +1483,8 @@ export default function App() {
             setTimeout(() => {
               document.getElementById('live-space-weather-widget')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
+          } else if (toolId === 'journey' || toolId === 'universe-journey') {
+            setActiveTab('journey');
           }
         }}
       />
