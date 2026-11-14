@@ -19,6 +19,7 @@ import { SpaceCursor } from './components/SpaceCursor';
 import { StarMapper } from './components/StarMapper';
 import { LiveSpaceWeather } from './components/LiveSpaceWeather';
 import { UniverseJourney } from './components/UniverseJourney';
+import { PlanetaryDossier } from './components/PlanetaryDossier';
 import {
   mountLiquidGlassPointerEngine,
   ColorosOpticalConfig,
@@ -1267,6 +1268,9 @@ export default function App() {
                     <ChevronRight className="w-4 h-4 text-cyan-400 group-hover:translate-x-1 transition-transform flex-shrink-0" />
                   </button>
                 </div>
+
+                {/* Rich Astrophysics Profile, Gravity/Radio Lab & Spacecraft Reconnaissance Missions */}
+                <PlanetaryDossier planet={activePlanet} themePreset={themePreset} />
 
               </div>
 
