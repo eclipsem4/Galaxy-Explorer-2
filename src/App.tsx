@@ -19,6 +19,15 @@ import { SpaceCursor } from './components/SpaceCursor';
 import { StarMapper } from './components/StarMapper';
 import { LiveSpaceWeather } from './components/LiveSpaceWeather';
 import { UniverseJourney } from './components/UniverseJourney';
+import {
+  mountLiquidGlassPointerEngine,
+  ColorosOpticalConfig,
+  COLOROS_OPTICAL_PRESETS,
+  DEFAULT_COLOROS_CONFIG,
+  loadColorosOpticalConfig,
+  saveColorosOpticalConfig,
+  applyColorosOpticalVars,
+} from './utils/liquidGlass';
 
 // Icons from lucide-react
 import { 
@@ -48,7 +57,9 @@ import {
   Check,
   Terminal,
   Radio,
-  Rocket
+  Rocket,
+  SlidersHorizontal,
+  RotateCcw
 } from 'lucide-react';
 
 export type NavTab = 'observatory' | 'system' | 'lab' | 'journey';
@@ -241,9 +252,22 @@ export default function App() {
     return (saved === 'monochrome' || saved === 'infrared' || saved === 'nebula' || saved === 'glass') ? (saved as ThemePreset) : 'glass';
   });
 
+  // Coloros Optical Studio Settings State
+  const [colorosConfig, setColorosConfig] = useState<ColorosOpticalConfig>(() => loadColorosOpticalConfig());
+
   useEffect(() => {
     localStorage.setItem('stellaris-theme-preset', themePreset);
   }, [themePreset]);
+
+  useEffect(() => {
+    saveColorosOpticalConfig(colorosConfig);
+    applyColorosOpticalVars(colorosConfig, themePreset === 'glass');
+  }, [colorosConfig, themePreset]);
+
+  // Global iOS 27 Liquid Glass Pointer Refraction Engine (active across all themes)
+  useEffect(() => {
+    return mountLiquidGlassPointerEngine();
+  }, []);
 
   // Derive theme-skinny planets list
   const themedPlanets = planetsData.map(p => getThemedPlanet(p, themePreset));
@@ -317,15 +341,24 @@ export default function App() {
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState<boolean>(false);
   const themeDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close theme dropdown on clicking outside
+  // Close theme dropdown on clicking outside or pressing Escape
   useEffect(() => {
     const handleClickOutsideTheme = (e: MouseEvent) => {
       if (themeDropdownRef.current && !themeDropdownRef.current.contains(e.target as Node)) {
         setIsThemeDropdownOpen(false);
       }
     };
+    const handleEscTheme = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsThemeDropdownOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutsideTheme);
-    return () => document.removeEventListener('mousedown', handleClickOutsideTheme);
+    document.addEventListener('keydown', handleEscTheme);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutsideTheme);
+      document.removeEventListener('keydown', handleEscTheme);
+    };
   }, []);
 
   // Listen for Ctrl+K or Cmd+K globally
@@ -609,10 +642,21 @@ export default function App() {
                       animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
                       exit={{ opacity: 0, y: 6, scale: 0.96, filter: 'blur(4px)' }}
                       transition={{ type: 'spring', stiffness: 320, damping: 26, mass: 0.8 }}
-                      className={`absolute right-0 mt-2 w-64 ${themePreset === 'glass' ? 'ios-glass-card' : 'bg-slate-950 border border-white/10'} rounded-2xl p-2.5 shadow-[0_15px_45px_rgba(0,0,0,0.85)] z-50 backdrop-blur-xl`}
+                      className={`absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5.5rem)] overflow-y-auto ${themePreset === 'glass' ? 'ios-glass-popover' : 'bg-slate-950/95 border border-white/15 backdrop-blur-2xl'} rounded-2xl p-3 shadow-[0_24px_60px_rgba(0,0,0,0.9)] z-50`}
                     >
-                      <div className="text-[8px] font-bold text-slate-400 font-mono tracking-widest uppercase mb-1.5 px-2">Aesthetic Theme Engine</div>
-                      <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between px-1.5 mb-2">
+                        <span className="text-[9px] font-bold text-slate-400 font-mono tracking-widest uppercase">
+                          Aesthetic Theme Engine
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsThemeDropdownOpen(false)}
+                          className="text-[9px] font-mono text-slate-300 hover:text-white px-2 py-0.5 rounded-md bg-white/8 hover:bg-white/15 border border-white/10 transition-colors cursor-pointer"
+                        >
+                          Done
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-1">
                         {(Object.entries({
                           glass: { 
                             name: 'Coloros', 
@@ -663,9 +707,14 @@ export default function App() {
                               type="button"
                               onClick={() => {
                                 setThemePreset(key as ThemePreset);
-                                setIsThemeDropdownOpen(false);
+                                if (!isCosmicMuted) {
+                                  SpaceAudio.playInterfaceChirp(key === 'glass' ? 1280 : 1020, 0.04);
+                                }
+                                if (key !== 'glass') {
+                                  setIsThemeDropdownOpen(false);
+                                }
                               }}
-                              className={`flex items-center justify-between w-full text-left p-2.5 rounded-xl font-mono transition-all duration-300 text-[10px] cursor-pointer relative overflow-hidden ${
+                              className={`flex items-center justify-between w-full text-left p-2 rounded-xl font-mono transition-all duration-300 text-[10px] cursor-pointer relative ${
                                 isActive 
                                   ? data.activeRing 
                                   : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
@@ -682,7 +731,6 @@ export default function App() {
                                         background: data.paletteGradient, 
                                         boxShadow: data.paletteGlow 
                                       }}
-                                      title={`${data.name} palette preview`}
                                       aria-label={`${data.name} color palette preview`}
                                     />
                                     {isActive && (
@@ -724,6 +772,145 @@ export default function App() {
                           );
                         })}
                       </div>
+
+                      {/* Coloros Professional Optical Studio Customizer */}
+                      <AnimatePresence>
+                        {themePreset === 'glass' && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-2.5 pt-2.5 border-t border-white/15 space-y-2.5 px-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-[9px] font-mono font-semibold text-sky-300 uppercase tracking-wider">
+                                  <SlidersHorizontal className="w-3 h-3" />
+                                  <span>Optical Studio</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setColorosConfig(DEFAULT_COLOROS_CONFIG);
+                                    if (!isCosmicMuted) SpaceAudio.playInterfaceChirp(1160, 0.03);
+                                  }}
+                                  className="flex items-center gap-1 text-[9px] font-mono text-slate-300 hover:text-white px-2 py-0.5 rounded-md bg-white/8 hover:bg-white/15 border border-white/10 transition-colors cursor-pointer"
+                                >
+                                  <RotateCcw className="w-2.5 h-2.5" />
+                                  <span>Reset</span>
+                                </button>
+                              </div>
+
+                              {/* Quick Optical Presets */}
+                              <div className="space-y-1">
+                                <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10">
+                                  {(Object.entries(COLOROS_OPTICAL_PRESETS) as [
+                                    keyof typeof COLOROS_OPTICAL_PRESETS,
+                                    (typeof COLOROS_OPTICAL_PRESETS)['studio']
+                                  ][]).map(([presetKey, preset]) => {
+                                    const isPresetActive = colorosConfig.preset === presetKey;
+                                    return (
+                                      <button
+                                        key={presetKey}
+                                        type="button"
+                                        onClick={() => {
+                                          setColorosConfig(preset.config);
+                                          if (!isCosmicMuted) SpaceAudio.playInterfaceChirp(1240, 0.03);
+                                        }}
+                                        className={`py-1.5 px-2 rounded-lg text-[9px] font-mono uppercase tracking-wider whitespace-nowrap transition-all cursor-pointer ${
+                                          isPresetActive
+                                            ? 'bg-sky-400/25 text-white font-bold border border-sky-300/50 shadow-[inset_0_1px_1px_rgba(255,255,255,0.35)]'
+                                            : 'text-slate-400 hover:text-white border border-transparent'
+                                        }`}
+                                      >
+                                        {preset.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <div className="text-[8.5px] font-mono text-slate-400 px-0.5">
+                                  {colorosConfig.preset === 'custom'
+                                    ? 'Custom optical calibration active'
+                                    : COLOROS_OPTICAL_PRESETS[colorosConfig.preset].desc}
+                                </div>
+                              </div>
+
+                              {/* Precision Optical Sliders */}
+                              <div className="space-y-2 text-[9px] font-mono">
+                                <label className="block space-y-1">
+                                  <div className="flex items-center justify-between text-slate-300">
+                                    <span>Blur Depth</span>
+                                    <span className="tabular-nums text-sky-300 font-semibold">{Math.round(colorosConfig.blurPx)}px</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={14}
+                                    max={48}
+                                    step={1}
+                                    value={colorosConfig.blurPx}
+                                    onChange={(e) =>
+                                      setColorosConfig((prev) => ({
+                                        ...prev,
+                                        preset: 'custom',
+                                        blurPx: Number(e.target.value),
+                                      }))
+                                    }
+                                    className="w-full coloros-slider"
+                                    aria-label="Coloros Backdrop Blur Depth"
+                                  />
+                                </label>
+
+                                <label className="block space-y-1">
+                                  <div className="flex items-center justify-between text-slate-300">
+                                    <span>Glass Density</span>
+                                    <span className="tabular-nums text-sky-300 font-semibold">{Math.round(colorosConfig.surfaceOpacity)}%</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={30}
+                                    max={82}
+                                    step={1}
+                                    value={colorosConfig.surfaceOpacity}
+                                    onChange={(e) =>
+                                      setColorosConfig((prev) => ({
+                                        ...prev,
+                                        preset: 'custom',
+                                        surfaceOpacity: Number(e.target.value),
+                                      }))
+                                    }
+                                    className="w-full coloros-slider"
+                                    aria-label="Coloros Glass Surface Density"
+                                  />
+                                </label>
+
+                                <label className="block space-y-1">
+                                  <div className="flex items-center justify-between text-slate-300">
+                                    <span>Specular Sheen</span>
+                                    <span className="tabular-nums text-sky-300 font-semibold">{Math.round(colorosConfig.specularIntensity)}%</span>
+                                  </div>
+                                  <input
+                                    type="range"
+                                    min={25}
+                                    max={100}
+                                    step={1}
+                                    value={colorosConfig.specularIntensity}
+                                    onChange={(e) =>
+                                      setColorosConfig((prev) => ({
+                                        ...prev,
+                                        preset: 'custom',
+                                        specularIntensity: Number(e.target.value),
+                                      }))
+                                    }
+                                    className="w-full coloros-slider"
+                                    aria-label="Coloros Specular Edge Sheen"
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -991,7 +1178,7 @@ export default function App() {
                 <div className="pt-6 border-t border-white/10 space-y-4">
                   <button 
                     onClick={handleAtmosphereToggle}
-                    className="w-fit group flex items-center gap-6 text-left focus:outline-none"
+                    className="w-fit group flex items-center gap-6 text-left focus:outline-none rounded-2xl px-3 py-2 -ml-3"
                   >
                     <div className="w-16 h-16 rounded-full border border-white/30 flex items-center justify-center group-hover:scale-110 group-hover:border-cyan-400 transition-all bg-black/40">
                       <div className={`w-3.5 h-3.5 ${isAtmosphereActive ? 'bg-cyan-400 animate-ping' : 'bg-white'} rotate-45 transition-colors`}></div>

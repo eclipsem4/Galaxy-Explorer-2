@@ -25,33 +25,13 @@ import {
 } from 'lucide-react';
 import { PlanetData, ThemePreset } from '../data/planets';
 import { PLANET_SECTOR_MAP, PlanetSectorInfo } from '../data/sectors';
+import { 
+  GroundedSource, 
+  AstronomicalEvent, 
+  BASELINE_PLANETARY_EVENTS 
+} from '../data/planetaryEvents';
 
-export interface GroundedSource {
-  title: string;
-  url: string;
-}
-
-export interface AstronomicalEvent {
-  id: string;
-  title: string;
-  type: 'transient_storm' | 'conjunction' | 'occultation' | 'spacecraft_telemetry' | 'auroral_flare' | 'meteor_stream';
-  typeLabel: string;
-  targetPlanet: string;
-  sectorName: string;
-  constellation: string;
-  coordinates: {
-    ra: string;
-    dec: string;
-  };
-  observationWindow: string;
-  apparentMagnitude?: string;
-  visibilityStatus: 'Prime Visibility' | 'Telescopic Required' | 'Transient Alert' | 'Spacecraft Only';
-  summary: string;
-  scientificNotes: string;
-  sources: GroundedSource[];
-  isRealTimeGrounded: boolean;
-  discoveredDate: string;
-}
+export type { GroundedSource, AstronomicalEvent };
 
 interface StarMapperProps {
   planet: PlanetData;
@@ -91,7 +71,118 @@ export const StarMapper: React.FC<StarMapperProps> = ({
   const [showConstellationLines, setShowConstellationLines] = useState<boolean>(true);
   const [showStarLabels, setShowStarLabels] = useState<boolean>(true);
 
-  // Fetch real-time grounded events from server with client caching
+  // Direct browser live feed fallback for static hosting (e.g., GitHub Pages where /api/* backend isn't running)
+  const fetchDirectLiveEvents = async (): Promise<{ events: AstronomicalEvent[]; grounded: boolean; source: string }> => {
+    const baseline = BASELINE_PLANETARY_EVENTS[planet.id.toLowerCase()] || BASELINE_PLANETARY_EVENTS.mars;
+    const liveEvents: AstronomicalEvent[] = [];
+
+    const fetchWithTimeout = async (url: string, ms = 4500) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), ms);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timer);
+        if (!res.ok) return null;
+        return await res.json();
+      } catch {
+        clearTimeout(timer);
+        return null;
+      }
+    };
+
+    const [newsData, noaaFlareData] = await Promise.all([
+      fetchWithTimeout(`https://api.spaceflightnewsapi.net/v4/articles/?search=${encodeURIComponent(planet.name)}&limit=3`),
+      fetchWithTimeout('https://services.swpc.noaa.gov/json/goes/primary/xray-flares-latest.json')
+    ]);
+
+    // Map live Spaceflight News articles about this planet into AstronomicalEvent dispatches
+    if (newsData && Array.isArray(newsData.results)) {
+      newsData.results.slice(0, 2).forEach((article: any, idx: number) => {
+        if (!article?.title || !article?.url) return;
+        const pubDate = article.published_at
+          ? new Date(article.published_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : 'Live Dispatch';
+        const rawSummary = (article.summary || '').trim();
+        const shortSummary = rawSummary.length > 220 ? `${rawSummary.slice(0, 217)}...` : rawSummary;
+
+        liveEvents.push({
+          id: `live-snapi-${planet.id}-${article.id || idx}`,
+          title: article.title,
+          type: 'spacecraft_telemetry',
+          typeLabel: 'Live Space Dispatch',
+          targetPlanet: planet.name,
+          sectorName: sectorInfo.sectorName,
+          constellation: sectorInfo.constellation,
+          coordinates: {
+            ra: sectorInfo.coordinates.ra,
+            dec: sectorInfo.coordinates.dec,
+          },
+          observationWindow: `Published ${pubDate}`,
+          apparentMagnitude: sectorInfo.apparentMagnitude,
+          visibilityStatus: 'Spacecraft Only',
+          summary: shortSummary || `Latest mission and observatory dispatch covering ${planet.name}.`,
+          scientificNotes: `Live mission telemetry & astronomical reporting via ${article.news_site || 'Spaceflight News Network'}.`,
+          sources: [
+            {
+              title: `${article.news_site || 'Space News'}: ${article.title.slice(0, 40)}...`,
+              url: article.url,
+            },
+          ],
+          isRealTimeGrounded: true,
+          discoveredDate: pubDate,
+        });
+      });
+    }
+
+    // Add live GOES-18 NOAA solar flare / magnetospheric coupling telemetry for inner/target worlds
+    if (Array.isArray(noaaFlareData) && noaaFlareData.length > 0) {
+      const latest = noaaFlareData[0];
+      const currentClass = latest.current_class || 'Nominal';
+      const maxClass = latest.max_class || currentClass;
+      const sat = latest.satellite || 18;
+      if (planet.id === 'earth' || planet.id === 'mercury' || planet.id === 'venus' || planet.id === 'mars' || liveEvents.length === 0) {
+        liveEvents.push({
+          id: `live-noaa-${planet.id}-${latest.time_tag || Date.now()}`,
+          title: `GOES-${sat} Live Solar X-Ray & Heliospheric Flux (${currentClass})`,
+          type: 'auroral_flare',
+          typeLabel: 'Live NOAA GOES Telemetry',
+          targetPlanet: planet.name,
+          sectorName: sectorInfo.sectorName,
+          constellation: sectorInfo.constellation,
+          coordinates: {
+            ra: sectorInfo.coordinates.ra,
+            dec: sectorInfo.coordinates.dec,
+          },
+          observationWindow: latest.time_tag ? `UTC ${latest.time_tag.replace('T', ' ').slice(0, 16)}` : 'Real-Time Stream',
+          apparentMagnitude: sectorInfo.apparentMagnitude,
+          visibilityStatus: 'Prime Visibility',
+          summary: `NOAA GOES-${sat} reports active solar X-ray emission at Class ${currentClass} (24h peak Class ${maxClass}), modulating heliospheric wind pressure across ${planet.name}'s orbital sector.`,
+          scientificNotes: `Live spacecraft X-ray ratio: ${typeof latest.current_ratio === 'number' ? latest.current_ratio.toFixed(4) : 'Nominal'} • Data streamed directly from NOAA Space Weather Prediction Center.`,
+          sources: [
+            { title: 'NOAA SWPC GOES X-Ray Flux', url: 'https://www.swpc.noaa.gov/products/goes-x-ray-flux' }
+          ],
+          isRealTimeGrounded: true,
+          discoveredDate: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        });
+      }
+    }
+
+    if (liveEvents.length > 0) {
+      return {
+        events: [...liveEvents, ...baseline],
+        grounded: true,
+        source: 'Live NOAA GOES-18 & Spaceflight News Feed',
+      };
+    }
+
+    return {
+      events: baseline,
+      grounded: false,
+      source: 'Observatory Ephemeris Database (Calibrated Baseline)',
+    };
+  };
+
+  // Fetch real-time grounded events from server with seamless static-host live fallback
   const fetchAstronomicalEvents = async (silent = false, forceRefresh = false) => {
     // Return cached planet events if available and not explicitly forcing refresh
     if (!forceRefresh && eventsCacheRef.current[planet.id]) {
@@ -110,44 +201,94 @@ export const StarMapper: React.FC<StarMapperProps> = ({
     setFetchError(null);
 
     try {
-      const response = await fetch('/api/planet-events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          planetId: planet.id,
-          planetName: planet.name,
-          sector: sectorInfo.sectorName,
-          constellation: sectorInfo.constellation,
-        }),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      let serverData: any = null;
 
-      if (!response.ok) {
-        throw new Error(`HTTP Error ${response.status}`);
+      try {
+        const response = await fetch('/api/planet-events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            planetId: planet.id,
+            planetName: planet.name,
+            sector: sectorInfo.sectorName,
+            constellation: sectorInfo.constellation,
+          }),
+        });
+        clearTimeout(timeoutId);
+
+        const contentType = response.headers.get('content-type') || '';
+        if (response.ok && contentType.includes('application/json')) {
+          serverData = await response.json();
+        }
+      } catch {
+        clearTimeout(timeoutId);
       }
 
-      const data = await response.json();
-      const receivedEvents = data.events || [];
-      const isLiveGrounded = !!data.grounded;
-      const sourceLabel = data.source || (isLiveGrounded ? 'Google Search Grounded' : 'Observatory Ephemeris Database');
+      if (serverData && Array.isArray(serverData.events) && serverData.events.length > 0) {
+        const receivedEvents = serverData.events;
+        const isLiveGrounded = !!serverData.grounded;
+        const sourceLabel = serverData.source || (isLiveGrounded ? 'Google Search Grounded' : 'Observatory Ephemeris Database');
 
-      setEvents(receivedEvents);
-      setIsGrounded(isLiveGrounded);
-      setGroundingSource(sourceLabel);
-      setLastRefreshed(new Date());
+        // If server only returned static baseline (e.g. no GEMINI_API_KEY), enrich with direct live feeds
+        if (!isLiveGrounded) {
+          const direct = await fetchDirectLiveEvents();
+          const finalEvents = direct.grounded ? direct.events : receivedEvents;
+          const finalGrounded = direct.grounded;
+          const finalSource = direct.grounded ? direct.source : sourceLabel;
 
-      // Save to client cache
-      eventsCacheRef.current[planet.id] = {
-        events: receivedEvents,
-        grounded: isLiveGrounded,
-        source: sourceLabel,
-      };
+          setEvents(finalEvents);
+          setIsGrounded(finalGrounded);
+          setGroundingSource(finalSource);
+          setLastRefreshed(new Date());
+          eventsCacheRef.current[planet.id] = { events: finalEvents, grounded: finalGrounded, source: finalSource };
+          if (finalEvents.length > 0) setSelectedEventId(finalEvents[0].id);
+          return;
+        }
 
-      if (receivedEvents.length > 0) {
-        setSelectedEventId(receivedEvents[0].id);
+        setEvents(receivedEvents);
+        setIsGrounded(isLiveGrounded);
+        setGroundingSource(sourceLabel);
+        setLastRefreshed(new Date());
+
+        eventsCacheRef.current[planet.id] = {
+          events: receivedEvents,
+          grounded: isLiveGrounded,
+          source: sourceLabel,
+        };
+
+        if (receivedEvents.length > 0) {
+          setSelectedEventId(receivedEvents[0].id);
+        }
+      } else {
+        // Static host path (e.g. GitHub Pages): fetch direct CORS-enabled live feeds + baseline ephemeris
+        const direct = await fetchDirectLiveEvents();
+        setEvents(direct.events);
+        setIsGrounded(direct.grounded);
+        setGroundingSource(direct.source);
+        setLastRefreshed(new Date());
+
+        eventsCacheRef.current[planet.id] = {
+          events: direct.events,
+          grounded: direct.grounded,
+          source: direct.source,
+        };
+
+        if (direct.events.length > 0) {
+          setSelectedEventId(direct.events[0].id);
+        }
       }
     } catch (err: any) {
-      console.warn('Failed to retrieve astronomical events:', err?.message || err);
-      setFetchError(err.message || 'Transient network anomaly');
+      console.warn('Falling back to calibrated ephemeris database:', err?.message || err);
+      const baseline = BASELINE_PLANETARY_EVENTS[planet.id.toLowerCase()] || BASELINE_PLANETARY_EVENTS.mars;
+      setEvents(baseline);
+      setIsGrounded(false);
+      setGroundingSource('Observatory Ephemeris Database (Offline Fallback)');
+      if (baseline.length > 0) {
+        setSelectedEventId(baseline[0].id);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -420,7 +561,7 @@ export const StarMapper: React.FC<StarMapperProps> = ({
     };
   }, [planet, zoom, pan, showGrid, showConstellationLines, showStarLabels, events, selectedEventId, themePreset]);
 
-  // Drag interaction handlers
+  // Drag interaction handlers (mouse & touch)
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     setIsDragging(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -438,6 +579,21 @@ export const StarMapper: React.FC<StarMapperProps> = ({
     setIsDragging(false);
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({ x: e.touches[0].clientX - pan.x, y: e.touches[0].clientY - pan.y });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    setPan({
+      x: e.touches[0].clientX - dragStart.x,
+      y: e.touches[0].clientY - dragStart.y,
+    });
+  };
+
   // Filter events by category
   const filteredEvents = events.filter((ev) => {
     if (activeFilter === 'all') return true;
@@ -452,7 +608,7 @@ export const StarMapper: React.FC<StarMapperProps> = ({
       {/* Top Header & Planet Switcher Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-white/10">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="px-2.5 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-[10px] font-mono text-cyan-300 uppercase tracking-widest flex items-center gap-1.5">
               <Compass className="w-3 h-3 text-cyan-400 animate-spin-slow" />
               Observatory Sub-System
@@ -460,7 +616,7 @@ export const StarMapper: React.FC<StarMapperProps> = ({
             {isGrounded ? (
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-mono text-emerald-300 uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Grounded with Google Search
+                {groundingSource.includes('Google') ? 'Grounded with Google Search' : 'Live Observatory Grounding'}
               </span>
             ) : (
               <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-[10px] font-mono text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
@@ -483,10 +639,10 @@ export const StarMapper: React.FC<StarMapperProps> = ({
             onClick={() => fetchAstronomicalEvents(false, true)}
             disabled={isLoading}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/10 hover:border-cyan-500/40 text-xs font-mono text-slate-200 transition-all shadow-md group disabled:opacity-50"
-            title="Perform fresh Google Search grounding across international astronomical telemetry"
+            title="Perform fresh live telemetry search across international astronomical feeds"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${isLoading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'}`} />
-            <span>{isLoading ? 'GROUNDING SEARCH...' : 'REFRESH PHENOMENA'}</span>
+            <span>{isLoading ? 'SYNCING LIVE FEED...' : 'REFRESH PHENOMENA'}</span>
           </button>
 
           {onReturnToPlanetDetail && (
@@ -574,7 +730,7 @@ export const StarMapper: React.FC<StarMapperProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Arena: Interactive Canvas Celestial Star Map (7 Cols) */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="relative w-full h-[520px] rounded-3xl overflow-hidden border border-white/15 bg-black shadow-2xl group">
+          <div className="relative w-full h-[360px] sm:h-[520px] rounded-3xl overflow-hidden border border-white/15 bg-black shadow-2xl group">
             {/* HTML5 Celestial Canvas */}
             <canvas
               ref={canvasRef}
@@ -584,7 +740,10 @@ export const StarMapper: React.FC<StarMapperProps> = ({
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              className="w-full h-full cursor-grab active:cursor-grabbing block"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleMouseUp}
+              className="w-full h-full cursor-grab active:cursor-grabbing block touch-none"
             />
 
             {/* Canvas Tactical HUD Overlay Top-Left */}

@@ -461,17 +461,7 @@ export function getThemedPlanet(planet: PlanetData, theme: ThemePreset): PlanetD
       }
     };
   }
-  if (theme === 'glass') {
-    return {
-      ...planet,
-      colors: {
-        primary: '#38bdf8', // crystal sky cyan
-        secondary: '#c084fc', // prismatic glass lilac
-        glow: 'rgba(56, 189, 248, 0.55)',
-        ambient: 'from-slate-950/90 via-sky-950/30 to-indigo-950/40'
-      }
-    };
-  }
+  // Coloros ('glass') and Nebula preserve every planet's authentic astronomical palette
   return planet;
 }
 
